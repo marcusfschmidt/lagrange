@@ -13,16 +13,22 @@ import sys; sys.path.append(".."); from figSetup import figSetup
 m = 1 # Mass of particle
 g = 9.81 # Gravitational acceleration
 l = 1 # Length of pendulum
-k = 1 # Spring constant
+k = 10 # Spring constant
 
-# Damping constant when including simple, linear damping
+### Damping constant when including simple, linear damping. Corresponds to Rayleigh dissipation of order 1, v ~ 1.
 dampingConstant = 0
 
-# Friction coefficient when including Rayleigh disspiation
-gamma = 0.3
-frictionCoefficient = 2*m*gamma
-# Order of the dissipation term
-n_order = 0
+### Friction coefficients when including Rayleigh disspiation
+# Friction coefficient ~ v^0, e.g. friction from the normal force of a surface
+kineticFriction = 0.1*m*g
+# Define the static friction coefficient when v ~ 0
+staticFriction = 0.2*m*g
+# Flag for boolean flipping the sign of the friction coefficient when velocity changes sign
+flipSignBoolean = True
+# Friction coefficient ~ v^1
+gamma = 0.05
+linearFrictionCoefficient = 2*m*gamma
+# If higher order friction is needed, the dissipation function must be changed accordingly
 
 
 ### Define step size for numerical differentiation
@@ -75,10 +81,13 @@ def dissipation(q, q_dot, t):
     """
     Returns the dissipation function for a system with a single generalized coordinate, neglecting particle-particle interactions.
     """
-    # Dissipation function for a system with a single generalized coordinate
-    D =  1/(n_order+1) * frictionCoefficient * q_dot**(n_order+1)
+    # Dissipation function for a system with a single generalized coordinate, zeroth order friction
+    D_0 =  (np.sign(q_dot) if flipSignBoolean else 1) * (staticFriction if np.abs(q_dot) < 1e-5 else kineticFriction)*q_dot
 
-    return D
+    # Dissipation function for a system with a single generalized coordinate, first order friction
+    D_1 = 1/2*linearFrictionCoefficient*q_dot**2
+
+    return D_0 + D_1
 
 
 #### Define helper functions for repeated differentiation
@@ -113,35 +122,37 @@ def ODE(t,y):
     return np.array([q_dot, q_dot_dot])
 
 # Initial conditions for the generalized coordinate and its derivative
-y0 = np.array([0.1, 1])
+y0 = np.array([1, 0.2])
 
 
 # Define the time array 
 ti = 0
-tf = 10
-t = np.linspace(ti, tf, 1000)
+tf = 5
+t = np.linspace(ti, tf, 10000)
 
 # Solve the IVP using solve_ivp
 sol = solve_ivp(ODE, (ti, tf), y0, t_eval = t, method = 'RK23')
 q = sol.y[0]
 q_dot = sol.y[1]
 
-# Define the analytical small-angle approximation solution for a pendulum
+
+######## Define the analytical small-angle approximation solution for a pendulum
 # analytical = q0[0]*np.cos(np.sqrt(g/l)*t)
 
 
-# Define the analytical solution for an underdamped harmonic oscillator
+######## Define the analytical solution for an underdamped harmonic oscillator
 ######
 # https://beltoforion.de/en/harmonic_oscillator/
-om0 = np.sqrt(k/m)
-om = np.sqrt(om0**2 - gamma**2)
-x0 = y0[0]
-v0 = y0[1]
-A = - np.sqrt(2*gamma*v0*x0 + v0**2 + x0**2*(gamma**2 + om**2))/(2*om)
-phi = -2*np.arctan((v0+gamma*x0)/(x0*om - np.sqrt(2*gamma*v0*x0+v0**2+x0**2*(gamma**2+om**2))))
-######
-analytical = np.exp(-gamma*t)*2*A*np.cos(om*t + phi)
+# om0 = np.sqrt(k/m)
+# om = np.sqrt(om0**2 - gamma**2)
+# A = - np.sqrt(2*gamma*v0*x0 + v0**2 + x0**2*(gamma**2 + om**2))/(2*om)
+# phi = -2*np.arctan((v0+gamma*x0)/(x0*om - np.sqrt(2*gamma*v0*x0+v0**2+x0**2*(gamma**2+om**2))))
+# ######
+# analytical = np.exp(-gamma*t)*2*A*np.cos(om*t + phi)
 
+
+######## Define the analytical solution for a block moving along the horizontal axis with friction
+analytical = -1/2*g*t**2 + y0[1]*t + y0[0]
 
 # Calculate the energy at each time step
 totalEnergy = np.zeros_like(t)
@@ -156,19 +167,19 @@ for i in range(len(t)):
 # Calculate the relative energy difference as a function of time
 dE = (totalEnergy - totalEnergy[0])/totalEnergy[0]
 
+
 # Plot the results
 fig, ax = figSetup(1, 3, sharex = True)
-ax[0].plot(t, q, label=r'$\theta(t)$')
-ax[0].plot(t, q_dot, label=r'$\omega(t)$')
-ax[0].plot(t, analytical, label=r'Analytical')
-ax[0].set_title(r'$\theta(t)$ and $\omega(t)$')
-# ax[0].set_xlim(2,4)
+ax[0].plot(t, q, label=r'$q(t)$')
+ax[0].plot(t, q_dot, label=r'$\dot{q}(t)$')
+# ax[0].plot(t, analytical, label=r'Analytical')
+ax[0].set_title(r'$q(t)$ and $\dot{q}(t)$')
 
 ax[1].plot(t, kineticEnergy, label=r'$T(t)$')
 ax[1].plot(t, potentialEnergy, label=r'$V(t)$')
 ax[1].plot(t, totalEnergy, label=r'$E(t)$')
-ax[1].set_title(r'$T(t)$, $V(t)$ and $E(t)$')
 
+ax[1].set_title(r'$T(t)$, $V(t)$ and $E(t)$')
 ax[2].plot(t, dE, label=r'$\Delta E(t)$')
 ax[2].set_title(r'$\Delta E(t)$')
 
