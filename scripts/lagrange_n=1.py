@@ -3,6 +3,7 @@ import sympy as sp
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 # Use style file for plots
 plt.style.use('../plotstyle.mplstyle')
@@ -30,6 +31,14 @@ gamma = 0.05
 linearFrictionCoefficient = 2*m*gamma
 # If higher order friction is needed, the dissipation function must be changed accordingly
 
+
+### Initial conditions for the generalized coordinate and its derivative
+y0 = np.array([1, 0.2])
+
+### Define the time array 
+ti = 0
+tf = 5
+t = np.linspace(ti, tf, 500)
 
 ### Define step size for numerical differentiation
 h = 1e-5
@@ -121,15 +130,6 @@ def ODE(t,y):
 
     return np.array([q_dot, q_dot_dot])
 
-# Initial conditions for the generalized coordinate and its derivative
-y0 = np.array([1, 0.2])
-
-
-# Define the time array 
-ti = 0
-tf = 5
-t = np.linspace(ti, tf, 10000)
-
 # Solve the IVP using solve_ivp
 sol = solve_ivp(ODE, (ti, tf), y0, t_eval = t, method = 'RK23')
 q = sol.y[0]
@@ -190,3 +190,47 @@ ax[0].legend()
 ax[1].legend()
 
 
+#%% Animation for a block w/ spring moving along the horizontal axis with friction
+
+
+h = 0.5  # height of the box
+
+# Initialize the figure
+fig, ax = figSetup(1, 2)
+
+ax[1].plot(t, q/np.max(q), label=r'$q(t)$')
+ax[1].plot(t, q_dot/np.max(q_dot), label=r'$\dot{q}(t)$')
+ax[1].plot(t, totalEnergy/np.max(totalEnergy), label=r'$E(t)$')
+ax[1].set_xlabel(r'$t$')
+ax[1].legend()
+ax[1].set_title("Normalized position, velocity and energy")
+
+
+ax[0].set_xlim(1.5 * (np.min(q) - h), 1.5 * np.max(q))
+ax[0].set_ylim(-h - 1, h + 1)
+ax[0].set_xlabel(r'$x$ [m]')
+
+# Remove ticks from y axis
+ax[0].set_yticks([])
+
+ax[0].set_title("Block with spring and friction")
+
+
+# Create the lines and rectangle
+wall_line = ax[0].vlines(min(q) - h, -h - 1, h + 1, 'k', linewidth=2)
+ground_line = ax[0].hlines(0, 1.5 * (np.min(q) - h), 1.5 * np.max(q), 'k', linewidth=2)
+spring_line, = ax[0].plot([min(q) - h, q[0] - h /2], [h/2,h/2], 'r-', linewidth=2, zorder = 0)
+box = plt.Rectangle((q[0] - h / 2, 0 ), h, h, fc='b', edgecolor='black')
+ax[0].add_patch(box)
+
+# Function to update the animation
+def update(frame):
+    box.set_x(q[frame] - h / 2)
+    spring_line.set_data([min(q)- h, q[frame] - h / 2], [h/2, h/2])
+    return box, spring_line 
+
+# Create the animation
+interval = np.ceil(tf*1000/len(t))
+ani = FuncAnimation(fig, update, frames=len(t), interval=interval, blit=True)
+fps = len(t)/tf
+ani.save('block_with_spring_friction.mp4', fps=fps, dpi=300)
