@@ -5,7 +5,7 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 ti = 0
-tf = 20
+tf =10
 t = np.linspace(ti, tf, 1500)
 
 
@@ -18,77 +18,26 @@ import sys; sys.path.append(".."); from figSetup import figSetup
 ### Define constants; only some of them are used depending on the system
 g = 9.81 # Gravitational acceleration
 # m = 1 # Mass of particles
-l = 1 # Length of pendulums
-dknArray = np.linspace(0.1, 4.5, 50)
-dknArray = np.array([2.9, 3, 3.1])
-dkArray = np.zeros_like(dknArray)
-
-# dkArray = np.array([0])
-# dkArray = np.linspace(-1, 1, 50)
-gam = 11.03625
-
-Es = 3.67875
-Ep = -14.6966
-
+l = 0.5 # Length of pendulums
+dkArray = np.array([1])
 q1M = np.zeros((len(dkArray), len(t)))
 q2M = np.zeros((len(dkArray), len(t)))
 
-def equations2(vars, *args):
-    x, theta = vars
-    k, g, l, m = args
+for n, dk in enumerate(dkArray):
+    m = 1
+    k = 30
+    m = k*l/(g*1)
+    # k = g*m*100/l
 
-    om0 = np.sqrt(g/(l + m*g/k)) # Natural frequency of the first pendulum
+    omp = np.sqrt(g/(l + m*g/k)) # Natural frequency of the first pendulum
     oms = np.sqrt(k/m) # Natural frequencies of the system
+    print(2*omp, oms)
+    amplitude = 7
+    omegaPendulum = omp
+    omegaSpring = oms*0
 
-    # eq1 = m*(oms**2 - om0**2)/(2*l) - gam
-    eq3 = potentialSpring([x, theta], [0, 0], 0) - Es
-    eq4 = potentialPendulum([x, theta], [0, 0], 0) - Ep
-    return (eq3, eq4)
+    print(k*(l + m*g/k), 4*g*m)
 
-
-def equations(vars, *args):
-    k = vars
-    dk, gam, m, g = args
-
-    om0 = np.sqrt(g/(l + m*g/k)) # Natural frequency of the first pendulum
-    oms = np.sqrt(k/m) # Natural frequencies of the system
-
-    eq1 = m*(oms**2 - om0**2)/(2*l) - gam
-    eq2 = 2*om0 - oms - dk
-    return (eq1, eq2)
-
-from scipy.optimize import fsolve, least_squares
-
-from numpy import sqrt as sqrt
-from numpy import arccos as acos
-
-
-m = 1
-for n, dkn in enumerate(dknArray):
-    k = g*m*dkn/l
-    # m = 1
-    #solve equations using fsolve
-    # m, k =  fsolve(equations, (1, 29.43), args = (dk, gam, l, g), maxfev = 10000)
-    # k =  fsolve(equations2, (20), args = (dk, g, l, m), maxfev = 10000)[0]
-    # sol = least_squares(equations2, (1, 29.43, 0.5, 0.05), args = (dk, gam, l, g, Es, Ep), bounds = ([0, 0, -l, -np.inf], [np.inf, np.inf, np.inf, np.inf]))
-    # m, k, x, theta = sol.x
-
-    # x, theta = fsolve(equations2, (0.5, 0.05), args = (k, g, l, m), maxfev = 10000)
-    # sol = least_squares(equations2, (0.5, 0.05), args = (k, g, l, m), bounds = ([0, -np.inf], [np.inf, np.inf]))
-    # x, theta = sol.x
-    # print(x, theta)
-    x = sqrt(2)*sqrt(Es/k)
-    theta = -acos(-Ep/(g*m*(l + sqrt(2)*sqrt(Es/k))))
-    print(Ep/(g*m*(l + sqrt(2)*sqrt(Es/k))))
-    print(x, theta)
-
-    #%%
-
-    om0 = np.sqrt(g/(l + m*g/k)) # Natural frequency of the first pendulum
-    oms = np.sqrt(k/m) # Natural frequencies of the system
-
-    dk = 2*om0 - oms
-    dkArray[n] = dk 
     # gam = m*(oms**2 - om0**2)/(2*l)
 
     ### Friction coefficients when including Rayleigh disspiation
@@ -102,24 +51,18 @@ for n, dkn in enumerate(dknArray):
     linearFrictionCoefficient = np.array([0.1, 0.1])*0
     # If higher order friction is needed, the dissipation function must be changed accordingly
 
-    # x = 0.5
-    # theta = 0.05
+    x = m*g/k
+    theta = -np.pi/4*0
 
     ### Initial conditions for the generalized coordinates and their deriatives 
     q0 = np.array([x, theta])
     v0 = np.array([0, 0])
     y0 = np.concatenate((q0, v0))
 
-    # print(kineticSpring(q0, v0, 0) + potentialSpring(q0, v0, 0))
-    # print(kineticPendulum(q0, v0, 0) + potentialPendulum(q0, v0, 0))
 
-    # ### Define the time array 
-    # ti = 0
-    # tf = 60
-    # t = np.linspace(ti, tf, 1000)
 
     ### Define step size for numerical differentiation
-    h = 1e-4
+    h = 1e-5
     ### Define the tolerances of the solver
     rtol = 1e-7
     atol = 1e-7
@@ -139,20 +82,20 @@ for n, dkn in enumerate(dknArray):
         q1, q2 = q
         v1, v2 = v
 
-
         return 0.5 * m*(l + q1)**2*v2**2
     
     def potentialSpring(q, v, t):
         q1, q2 = q
 
+     
 
-        return 0.5*k*q1**2
-    
+        # return 0.5*k*q1**2 - amplitude*(q1)*np.sin(omegaSpring*t)*np.cos(q2) - amplitude*(q1)*np.sin(omegaPendulum*t)*np.sin(q2)
+        return 0.5*k*q1**2 - amplitude*q1*np.sin(omegaSpring*t )
     def potentialPendulum(q, v, t):
         q1, q2 = q
 
-
-        return -g * m *(l + q1)*np.cos(q2)
+        # return -g * m *(l + q1)*np.cos(q2) - amplitude*(l + q1)*q2*np.sin(omegaPendulum*t)*np.cos(q2) - amplitude*(l + q1)*q2*np.sin(omegaSpring*t)*np.sin(q2)
+        return -g * m *(l + q1)*np.cos(q2) - amplitude*(l+q1)*q2*np.sin(omegaPendulum*t)
 
     ### Define the kinetic and potential energy functions
     def kinetic(q, v, t):
@@ -161,11 +104,7 @@ for n, dkn in enumerate(dknArray):
   
 
         return kineticPendulum(q, v, t) + kineticSpring(q, v, t)
-        # return 0.5 * m1 *(v1**2 + (l1 + q1)**2*v2**2)
-        # # Kinetic energy terms for a double pendulum
-        # T1 = 0.5 * m1 * l1**2 * v1**2
-        # T2 = 0.5 * m2 * (l1**2 * v1**2 + l2**2 * v2**2 + 2 * l1 * l2 * v1 * v2 * np.cos(q1 - q2))
-        # return T1 + T2
+
 
     # Potential energy function
     def potential(q, v, t):
@@ -173,12 +112,6 @@ for n, dkn in enumerate(dknArray):
         v1, v2 = v 
 
         return potentialPendulum(q, v, t) + potentialSpring(q, v, t)
-        # return -g * m1 *(l1 + q1)*np.cos(q2) + 0.5*k1*q1**2
-
-        # # Potential energy terms for a double pendulum
-        # U1 = -m1 * g * l1 * np.cos(q1)
-        # U2 = -m2 * g * (l1 * np.cos(q1) + l2 * np.cos(q2))
-        # return U1 + U2
 
     ### Define the Lagrangian with. j is a dummy variable needed to perform mixed partial derivatives.
     # Unlike for the n = 1 script, the damping function exp(ct) is not included and must be incorporated via the dissipation function.
@@ -276,8 +209,8 @@ for n, dkn in enumerate(dknArray):
     q1_dot = sol.y[2]
     q2_dot = sol.y[3]
 
-    q1M[n,:] = q1
-    q2M[n,:] = q2/(potential(q0, v0, 0) + kinetic(q0, v0, 0))
+    q1M[n, :] = q1
+    q2M[n, :] = q2
 
 
     # q1M[n] = kineticSpring([q1, q2], [q1_dot, q2_dot], t) + potentialSpring([q1, q2], [q1_dot, q2_dot], t)
@@ -306,6 +239,20 @@ for n, dkn in enumerate(dknArray):
 
 # # Calculate the relative energy difference as a function of time
 # dE = (totalEnergy - totalEnergy[0])/totalEnergy[0]
+omega = omegaSpring if omegaSpring > omegaPendulum else omegaPendulum
+fig, ax = figSetup(1, 1)
+ax.plot(t, q1M[0, :])
+ax.plot(t, q2M[0, :]/np.max(q2M[0, :]))
+ax.plot(t, np.sin((omega)*t))
+firstForcePeak = 1/2*np.pi/omega
+
+## Find the first peak of q2M using scipy.signal.find_peaks
+from scipy.signal import find_peaks
+peaks, _ = find_peaks(q2M[0, :])
+print((t[peaks[0]] - firstForcePeak)/firstForcePeak)
+
+
+# ax.set_xlim(0, 5)
 
 #%%
 fig, ax = figSetup(1, 1)
@@ -314,28 +261,13 @@ ax.pcolormesh(t, dkArray, q2M**2)
 #%%
 fig, ax = figSetup(1, 1)
 for i in range(len(dkArray)):
-    ax.plot(t, q2M[i,:]**2, label = r'$q_2(t)$')
+    ax.plot(t, q2M[i, :]**2, label = dkArray[i])
+ax.legend()
 
 
 #%%
-#make outer product of t and dkArray to get a 2D array
-t2D, dkArray2D = np.meshgrid(t, dkArray)
-test = t2D**2*np.sinc(1/np.pi*(dkArray2D*t2D)/2)**2
 fig, ax = figSetup(1, 1)
-ax.pcolormesh(t, dkArray, test)
-
-#%%
-
-idx = 795
-fig, ax = figSetup(1, 1)
-ax.plot(dkArray, q2M[:,idx]**2, label = r'$q_2(t)$')
-
-
-
-
-
-
-
+ax.plot(dkArray, q2M[:, -300]**2, label = dkArray[i])
 
 
 
