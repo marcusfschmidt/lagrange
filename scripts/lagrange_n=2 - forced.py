@@ -5,8 +5,8 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 ti = 0
-tf =10
-t = np.linspace(ti, tf, 1500)
+tf = 20
+t = np.linspace(ti, tf, 2500)
 
 
 
@@ -19,22 +19,23 @@ import sys; sys.path.append(".."); from figSetup import figSetup
 g = 9.81 # Gravitational acceleration
 # m = 1 # Mass of particles
 l = 0.5 # Length of pendulums
-dkArray = np.array([1])
+dkArray = np.array([2.9, 3, 3.1])
+ampArray = np.linspace(0.01, 25, 50)
 q1M = np.zeros((len(dkArray), len(t)))
 q2M = np.zeros((len(dkArray), len(t)))
+phasedif = np.zeros(len(ampArray))
+
 
 for n, dk in enumerate(dkArray):
-    m = 1
-    k = 30
-    m = k*l/(g*1)
-    # k = g*m*100/l
+    m = 2
+    k = g*m*dk/l
 
     omp = np.sqrt(g/(l + m*g/k)) # Natural frequency of the first pendulum
     oms = np.sqrt(k/m) # Natural frequencies of the system
     print(2*omp, oms)
-    amplitude = 7
-    omegaPendulum = omp
-    omegaSpring = oms*0
+    amplitude = 1
+    omegaPendulum = omp*0
+    omegaSpring = oms
 
     print(k*(l + m*g/k), 4*g*m)
 
@@ -48,11 +49,11 @@ for n, dk in enumerate(dkArray):
     # Flag for boolean flipping the sign of the friction coefficient when velocity changes sign
     flipSignBoolean = True
     # Friction coefficient ~ v^1
-    linearFrictionCoefficient = np.array([0.1, 0.1])*0
+    linearFrictionCoefficient = np.array([0.4, 0])*0
     # If higher order friction is needed, the dissipation function must be changed accordingly
 
-    x = m*g/k
-    theta = -np.pi/4*0
+    x = m*g/k + 0.5*0
+    theta = -np.pi/4*0 + 0.001
 
     ### Initial conditions for the generalized coordinates and their deriatives 
     q0 = np.array([x, theta])
@@ -95,7 +96,7 @@ for n, dk in enumerate(dkArray):
         q1, q2 = q
 
         # return -g * m *(l + q1)*np.cos(q2) - amplitude*(l + q1)*q2*np.sin(omegaPendulum*t)*np.cos(q2) - amplitude*(l + q1)*q2*np.sin(omegaSpring*t)*np.sin(q2)
-        return -g * m *(l + q1)*np.cos(q2) - amplitude*(l+q1)*q2*np.sin(omegaPendulum*t)
+        return -g * m *(l + q1)*np.cos(q2) - amplitude*(l)*(q2)*np.sin(omegaPendulum*t)
 
     ### Define the kinetic and potential energy functions
     def kinetic(q, v, t):
@@ -238,25 +239,42 @@ for n, dk in enumerate(dkArray):
 
 
 # # Calculate the relative energy difference as a function of time
-# dE = (totalEnergy - totalEnergy[0])/totalEnergy[0]
-omega = omegaSpring if omegaSpring > omegaPendulum else omegaPendulum
-fig, ax = figSetup(1, 1)
-ax.plot(t, q1M[0, :])
-ax.plot(t, q2M[0, :]/np.max(q2M[0, :]))
-ax.plot(t, np.sin((omega)*t))
-firstForcePeak = 1/2*np.pi/omega
+# # dE = (totalEnergy - totalEnergy[0])/totalEnergy[0]
+#     omega = omegaSpring if omegaSpring > omegaPendulum else omegaPendulum
+#     # fig, ax = figSetup(1, 1)
+#     # ax.plot(t, q1M[0, :])
+#     # ax.plot(t, q2M[0, :])
+#     # ax.plot(t, amplitude*np.sin((omega)*t))
+#     firstForcePeak = 1/2*np.pi/omega
 
-## Find the first peak of q2M using scipy.signal.find_peaks
-from scipy.signal import find_peaks
-peaks, _ = find_peaks(q2M[0, :])
-print((t[peaks[0]] - firstForcePeak)/firstForcePeak)
+#     # ## function to find nearest
+#     # def find_nearest(array, value):
+#     #     array = np.asarray(array)
+#     #     idx = (np.abs(array - value)).argmin()
+#     #     return idx
 
+#     # firstForcePeakIdx = find_nearest(t, firstForcePeak)
 
+#     ## Find the first peak of q2M using scipy.signal.find_peaks
+#     from scipy.signal import find_peaks
+#     peaks, _ = find_peaks(q2)
+#     # ax.plot(t[peaks[0]], q2M[0, peaks[0]], 'o', color = 'k')
+#     # ax.plot(t[firstForcePeakIdx], amplitude*np.sin((omega)*t)[firstForcePeakIdx], 'o', color = 'k')
+#     # print((t[peaks[0]] - firstForcePeak)/firstForcePeak)
+#     phasedif[n] = (t[peaks[0]] - firstForcePeak)
+
+#%%
 # ax.set_xlim(0, 5)
+T = 2*np.pi/omega
+fig, ax = figSetup(1, 1)
+ax.plot(ampArray, phasedif/T*4)
+
+
 
 #%%
 fig, ax = figSetup(1, 1)
-ax.pcolormesh(t, dkArray, q2M**2)
+ax.plot(t, q1)
+ax.plot(t, q2)
 
 #%%
 fig, ax = figSetup(1, 1)
